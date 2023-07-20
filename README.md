@@ -1,6 +1,6 @@
 <p>SOSNet: Real-Time Small Object Segmentation via Hierarchical Decoding and Example Mining</p>
 
-![本地路径](assests/improvement.png#pic_center)
+![本地路径](assests/improve.png#pic_center)
 
 ![本地路径](assests/overview.png)
 ## <div align="center">Usage</div>
