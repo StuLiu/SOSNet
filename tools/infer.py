@@ -3,6 +3,7 @@ import argparse
 import yaml
 import math
 import cv2
+from tqdm import tqdm
 from torch import Tensor
 from torch.nn import functional as F
 from pathlib import Path
@@ -98,8 +99,9 @@ if __name__ == '__main__':
         segmap = semseg.predict(str(test_file), cfg['TEST']['OVERLAY'])
         io.write_png(segmap, str(save_dir / f"{str(test_file.stem)}.png"))
     else:
-        files = test_file.glob('*.*')
-        for file in files:
+        files = list(test_file.glob('*.*'))
+        files.sort()
+        for file in tqdm(files):
             print(f'Inferencing {file} ...')
             segmap = semseg.predict(str(file), cfg['TEST']['OVERLAY'])
             io.write_png(segmap, str(save_dir / f"{str(file.stem)}.png"))

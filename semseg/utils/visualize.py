@@ -8,13 +8,13 @@ from torchvision.utils import make_grid
 from semseg.augmentations import Compose, Normalize, RandomResizedCrop
 
 
-def visualize_dataset_sample(dataset, root, split='val', batch_size=4):
+def visualize_dataset_sample(dataset, root, split='val', batch_size=4, postfix_dir=''):
     transform = Compose([
         RandomResizedCrop((512, 512), scale=(1.0, 1.0)),
         Normalize()
     ])
 
-    dataset = dataset(root, split=split, transform=transform)
+    dataset = dataset(root, split=split, transform=transform, postfix_dir=postfix_dir)
     dataloader = DataLoader(dataset, shuffle=True, batch_size=batch_size)
     image, label = next(iter(dataloader))
 

@@ -9,7 +9,8 @@ class BaseModel(nn.Module):
     def __init__(self, backbone: str = 'MiT-B0', num_classes: int = 19) -> None:
         super().__init__()
         self.backbone = None
-        if backbone is not None:
+        self.num_classes = num_classes
+        if backbone is not None and backbone != 'None':
             backbone, variant = backbone.split('-')
             self.backbone = eval(backbone)(variant)
 

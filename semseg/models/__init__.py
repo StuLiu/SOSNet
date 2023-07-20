@@ -13,23 +13,25 @@ from .pspnet import PSPNet
 from .upernet import UperNet
 # from .sosnet_ablation import SOSNetBaseline, SOSNetSB, SOSNetDFEMABL
 from .fast_scnn import FastSCNN
+from .ccnet import CCNet
+from .topformer import TopFormer
+from .pidnet import PIDNet
 
 
 __all__ = [
-    'SegFormer', 
+    'SegFormer',
     'Lawin',
-    'SFNet', 
-    'BiSeNetv1', 
-    
-    # Standalone Models
-    'DDRNet', 
-    'FCHarDNet', 
-    'BiSeNetv2',
-
-    # added models
-    'FastSCNN',
+    'SFNet',
+    'BiSeNetv1',
+    'TopFormer',
     'PSPNet',
     'DeeplabV3Plus',
     'UperNet',
-    # 'SOSNet', 'SOSNetBaseline', 'SOSNetSB', 'SOSNetDFEMABL',
+    'CCNet',
+    # Standalone Models
+    'FastSCNN',
+    'DDRNet',
+    'FCHarDNet',
+    'BiSeNetv2',
+    'PIDNet',
 ]

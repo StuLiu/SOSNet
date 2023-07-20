@@ -46,7 +46,7 @@ class UAVid2020(Dataset):
 
     SMALL_OBJECT = [3, 6, 7]
 
-    def __init__(self, root: str, split: str = 'train', transform=None, preload=False) -> None:
+    def __init__(self, root: str, split: str = 'train', transform=None, preload=False, **kwargs) -> None:
         super().__init__()
         assert split in ['train', 'val', 'test']
         # assert split in ['train', 'val', 'test']

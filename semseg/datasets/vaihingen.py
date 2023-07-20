@@ -27,9 +27,11 @@ class Vaihingen(Dataset):
                             [0, 255, 0], [255, 255, 0], [255, 0, 0]])
     SMALL_OBJECT = [4]
 
-    def __init__(self, root: str, split: str = 'train', transform=None) -> None:
+    def __init__(self, root: str, split: str = 'train', transform=None, postfix_dir='') -> None:
         super().__init__()
         assert split in ['train', 'val', 'test']
+        # assert postfix_dir in ['', '_so_0_1024', '_so_1024_4096', '_so_4096_16384', '_so_16384_1048576']
+        assert postfix_dir in ['', '_so_0_1024', '_so_0_4096', '_so_0_16384', '_so_0_65536', '_so_0_1048576']
         self.split = 'val' if split == 'test' else split
         self.transform = transform
         self.n_classes = len(self.CLASSES)
@@ -38,13 +40,15 @@ class Vaihingen(Dataset):
         self.files = glob(img_dir + '/*.png')
         assert len(self.files) > 0, f"No images found in {root}"
         logging.info(f"Found {len(self.files)} {split} images.")
+        self.split_fact = split + postfix_dir
 
     def __len__(self) -> int:
         return len(self.files)
 
     def __getitem__(self, index: int) -> Tuple[Tensor, Tensor]:
+
         img_path = str(self.files[index])
-        lbl_path = str(self.files[index].replace('img_dir', 'ann_dir'))
+        lbl_path = str(self.files[index].replace('img_dir', 'ann_dir').replace(self.split, self.split_fact))
 
         image = io.read_image(img_path)
         label = io.read_image(lbl_path)
@@ -116,4 +120,4 @@ class Vaihingen2(Dataset):
 if __name__ == '__main__':
     from semseg.utils.visualize import visualize_dataset_sample
 
-    visualize_dataset_sample(Vaihingen, '../../data/ISPRS_DATA/Vaihingen2')
+    visualize_dataset_sample(Vaihingen, '../../data/ISPRS_DATA/Vaihingen2', postfix_dir='_so_0_1048576')

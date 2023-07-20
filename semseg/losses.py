@@ -21,7 +21,7 @@ class CrossEntropy(nn.Module):
 
 
 class OhemCrossEntropy(nn.Module):
-    def __init__(self, ignore_label: int = 255, weight: Tensor = None, thresh: float = 0.5,
+    def __init__(self, ignore_label: int = 255, weight: Tensor = None, thresh: float = 0.7,
                  aux_weights: [tuple, list] = (1, 1)) -> None:
         super().__init__()
         self.ignore_label = ignore_label
@@ -46,56 +46,56 @@ class OhemCrossEntropy(nn.Module):
         return self._forward(preds, labels)
 
 
-class SOEM(nn.Module):
-
-    def __init__(self, ignore_label=255, ratio=0.1, threshold=0.5) -> None:
-        """
-        Small object example mining for SOSNet
-        Args:
-            ignore_label: int, ignore label id in dataset
-            ratio:
-            threshold:
-        """
-        super().__init__()
-        self.ignore_label = ignore_label
-        self.ratio = ratio
-        self.threshold = threshold
-
-    def forward(self, loss: Tensor, labels: Tensor, labels_s: Tensor) -> Tensor:
-        """
-        Args:
-            loss: the joint loss, 0 where the ground truth label is ignored.
-            labels: the segmentation labels
-            labels_s: the small objet labels that indicate where the small objects are.
-
-        Returns:
-            loss_hard: the mean value of those hardest mse losses.
-        """
-        # preds in shape [B, C, H, W] and labels in shape [B, H, W]
-        n_min = int(labels[labels != self.ignore_label].numel() * self.ratio)
-        loss_flat = loss.contiguous().view(-1)
-        labels_s_flat = labels_s.contiguous().view(-1)
-        loss_s = loss_flat[labels_s_flat == 1]
-        loss_l = loss_flat[labels_s_flat == 0]
-        loss_hard_s = loss_s[loss_s > self.threshold]
-        loss_hard_l = loss_l[loss_l > self.threshold]
-
-        if loss_hard_s.numel() < n_min:
-            if loss_s.numel() <= n_min:
-                loss_hard_s = loss_s
-            else:
-                loss_hard_s, _ = loss_s.topk(n_min)
-
-        if loss_hard_l.numel() < n_min:
-            if loss_l.numel() <= n_min:
-                loss_hard_l = loss_l
-            else:
-                loss_hard_l, _ = loss_l.topk(n_min)
-
-        loss_hard = (torch.sum(loss_hard_s) + torch.sum(loss_hard_l)) / (loss_hard_s.numel() + loss_hard_l.numel())
-
-        # return torch.mean(loss)
-        return loss_hard
+# class SOEM(nn.Module):
+#
+#     def __init__(self, ignore_label=255, ratio=0.1, threshold=0.5) -> None:
+#         """
+#         Small object example mining for SOSNet
+#         Args:
+#             ignore_label: int, ignore label id in dataset
+#             ratio:
+#             threshold:
+#         """
+#         super().__init__()
+#         self.ignore_label = ignore_label
+#         self.ratio = ratio
+#         self.threshold = threshold
+#
+#     def forward(self, loss: Tensor, labels: Tensor, labels_s: Tensor) -> Tensor:
+#         """
+#         Args:
+#             loss: the joint loss, 0 where the ground truth label is ignored.
+#             labels: the segmentation labels
+#             labels_s: the small objet labels that indicate where the small objects are.
+#
+#         Returns:
+#             loss_hard: the mean value of those hardest mse losses.
+#         """
+#         # preds in shape [B, C, H, W] and labels in shape [B, H, W]
+#         n_min = int(labels[labels != self.ignore_label].numel() * self.ratio)
+#         loss_flat = loss.contiguous().view(-1)
+#         labels_s_flat = labels_s.contiguous().view(-1)
+#         loss_s = loss_flat[labels_s_flat == 1]
+#         loss_l = loss_flat[labels_s_flat == 0]
+#         loss_hard_s = loss_s[loss_s > self.threshold]
+#         loss_hard_l = loss_l[loss_l > self.threshold]
+#
+#         if loss_hard_s.numel() < n_min:
+#             if loss_s.numel() <= n_min:
+#                 loss_hard_s = loss_s
+#             else:
+#                 loss_hard_s, _ = loss_s.topk(n_min)
+#
+#         if loss_hard_l.numel() < n_min:
+#             if loss_l.numel() <= n_min:
+#                 loss_hard_l = loss_l
+#             else:
+#                 loss_hard_l, _ = loss_l.topk(n_min)
+#
+#         loss_hard = (torch.sum(loss_hard_s) + torch.sum(loss_hard_l)) / (loss_hard_s.numel() + loss_hard_l.numel())
+#
+#         # return torch.mean(loss)
+#         return loss_hard
 
 
 class BinaryDiceLoss(torch.nn.Module):
@@ -114,7 +114,7 @@ class BinaryDiceLoss(torch.nn.Module):
         Returns:
             score: torch.FloatTensor, dice loss, shape=(1,)
         """
-        num = targets.size(0)   # batch size
+        num = targets.size(0)  # batch size
         probs = torch.sigmoid(logits)
         m1 = probs.view(num, -1)
         m2 = targets.view(num, -1)
@@ -153,20 +153,64 @@ class Dice(nn.Module):
         return self._forward(preds, targets)
 
 
-class Focal(nn.Module):
-    def __init__(self, ignore_index=255, weight=None, gamma=2, size_average=True):
+class Focal(torch.nn.Module):
+    def __init__(self, ignore_index=255, weight=None, gamma=2, alpha=None, reduction='none'):
         super(Focal, self).__init__()
+        self.ignore_label = ignore_index
         self.gamma = gamma
-        self.size_average = size_average
-        self.CE_loss = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, reduction='none')
+        self.alpha = alpha
+        if isinstance(alpha, (float, int)):
+            self.alpha = torch.Tensor([alpha, 1 - alpha]).cuda()
+        if isinstance(alpha, list):
+            self.alpha = torch.Tensor(alpha).cuda()
+        self.reduction = reduction
 
-    def forward(self, output, target):
-        logpt = self.CE_loss(output, target)
-        pt = torch.exp(-logpt)
-        loss = ((1 - pt) ** self.gamma) * logpt
-        if self.size_average:
+    def forward(self, logits, target):
+        bs, h, w = target.shape
+        if logits.dim() > 2:
+            logits = logits.view(logits.size(0), logits.size(1), -1)  # N,C,H,W => N,C,H*W
+            logits = logits.transpose(1, 2)  # N,C,H*W => N,H*W,C
+            logits = logits.contiguous().view(-1, logits.size(2))  # N,H*W,C => N*H*W,C
+        target = target.view(-1, 1)
+        logpt = torch.log_softmax(logits, dim=-1)
+        logpt = logpt.gather(1, target)
+        logpt = logpt.view(-1)
+        pt = logpt.exp()
+
+        if self.alpha is not None:
+            if self.alpha.type() != input.data.type():
+                self.alpha = self.alpha.type_as(input.data)
+            at = self.alpha.gather(0, target.view(-1))
+            logpt = logpt * at
+
+        loss = -1 * (1 - pt) ** self.gamma * logpt
+        loss = loss.reshape(-1, h, w)
+        target = target.reshape(-1, h, w)
+        mean_loss = loss.mean().detach()
+        loss = torch.where(target != self.ignore_label, loss, mean_loss)
+        if self.reduction == 'mean':
             return loss.mean()
-        return loss.sum()
+        elif self.reduction == 'sum':
+            return loss.sum()
+        else:
+            return loss
+
+
+# class Focal(nn.Module):
+#     def __init__(self, ignore_index=255, weight=None, gamma=2, size_average=True):
+#         super(Focal, self).__init__()
+#         self.gamma = gamma
+#         self.size_average = size_average
+#         self.CE_loss = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, reduction='none')
+#
+#     def forward(self, output, target):
+#         logpt = self.CE_loss(output, target)
+#         pt = torch.exp(-logpt)
+#         loss = ((1 - pt) ** self.gamma) * logpt
+#         return loss
+#         # if self.size_average:
+#         #     return loss.mean()
+#         # return loss.sum()
 
 
 class FocalDice(nn.Module):
@@ -198,7 +242,7 @@ class DiceBCELoss(nn.Module):
             loss_diceBce
         """
         loss_dice = self.dice(logits, targets)
-        loss_bce =  self.bce(logits, targets)
+        loss_bce = self.bce(logits, targets)
         loss_diceBce = loss_dice + loss_bce
         return loss_diceBce
 
@@ -215,10 +259,10 @@ def get_loss(loss_fn_name: str = 'CrossEntropy', ignore_label: int = 255, cls_we
 
 
 if __name__ == '__main__':
-    _pred = torch.randint(0, 2, (2, 2, 480, 640), dtype=torch.float)
-    _label = torch.randint(0, 2, (2, 480, 640), dtype=torch.long)
-    _pred2 = torch.randint(0, 2, (2, 480, 640), dtype=torch.float)
-    _label2 = torch.randint(0, 2, (2, 480, 640), dtype=torch.float)
-    loss_fn = DiceBCELoss()
-    y = loss_fn(_pred2, _label2)
+    _pred = torch.randint(0, 2, (2, 3, 480, 640), dtype=torch.float).cuda()
+    _label = torch.randint(0, 3, (2, 480, 640), dtype=torch.long).cuda()
+    _pred2 = torch.randint(0, 2, (2, 480, 640), dtype=torch.float).cuda()
+    _label2 = torch.randint(0, 2, (2, 480, 640), dtype=torch.float).cuda()
+    loss_fn = Focal(ignore_index=0)
+    y = loss_fn(_pred, _label)
     print(y)

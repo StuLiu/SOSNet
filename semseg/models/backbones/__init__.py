@@ -9,6 +9,7 @@ from .pvt import PVTv2, pvtv2_settings
 from .rest import ResT, rest_settings
 from .poolformer import PoolFormer, poolformer_settings
 from .convnext import ConvNeXt, convnext_settings
+from .topformer import TokenPyramidTransformer, topformer_cfgs
 
 
 __all__ = [
@@ -19,8 +20,9 @@ __all__ = [
     'MobileNetV3',
     
     'MiT', 
-    'PVTv2', 
+    'PVTv2',
     'ResT',
     'PoolFormer',
     'ConvNeXt',
+    'TokenPyramidTransformer',
 ]

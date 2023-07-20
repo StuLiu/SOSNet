@@ -52,11 +52,11 @@ def main(cfg, gpu, save_dir):
     model = eval(model_cfg['NAME'])(model_cfg['BACKBONE'], trainset.n_classes)
     model.init_pretrained(model_cfg['PRETRAINED'])
     model_summary(model)
-    model = model.to(device)
+    model = model.cuda()
     # model.freeze_backbone()
 
-    trans_so = SmallObjectMask(trainset.SMALL_OBJECT).to(device)
-    trans_edge = EdgeMask().to(device)
+    trans_so = SmallObjectMask(trainset.SMALL_OBJECT).cuda()
+    trans_edge = EdgeMask().cuda()
 
     if train_cfg['DDP']:
         sampler = DistributedSampler(trainset, dist.get_world_size(), dist.get_rank(), shuffle=True)
@@ -69,17 +69,18 @@ def main(cfg, gpu, save_dir):
     valloader = DataLoader(valset, batch_size=1, num_workers=1, pin_memory=True)
 
     iters_per_epoch = len(trainset) // train_cfg['BATCH_SIZE']
-    # class_weights = trainset.class_weights.to(device)
+    # class_weights = trainset.class_weights.cuda()
     loss_edge_fn = DiceBCELoss()
     loss_seg_fn = get_loss(loss_cfg['NAME'], dataset_cfg['IGNORE_LABEL'], None)
     loss_hier_fn = HierarchicalLoss(trainset.n_classes, trainset.SMALL_OBJECT)
     # loss_hier_fn.load_state_dict(torch.load(os.path.join('checkpoints/hier_loss', f'{dataset_cfg["NAME"]}.pth'),
     #                                         map_location='cpu'), strict=True)
-    loss_hier_fn = loss_hier_fn.to(device)
+    loss_hier_fn = loss_hier_fn.cuda()
     loss_hierSeg_fn = HierarchicalSegLoss(
         loss_seg_fn=loss_seg_fn,
         loss_hier_fn=loss_hier_fn,
         ignore_label=dataset_cfg['IGNORE_LABEL'],
+        is_top=_cfg['args']['top'],
         is_hier=_cfg['args']['hier'],
         is_soem=_cfg['args']['soem'],
         ratio=_cfg['args']['ratio'],
@@ -105,8 +106,8 @@ def main(cfg, gpu, save_dir):
         for img, lbl in pbar:
             optimizer.zero_grad(set_to_none=True)
 
-            img = img.to(device)
-            lbl_seg = lbl.to(device)
+            img = img.cuda()
+            lbl_seg = lbl.cuda()
             lbl_so = trans_so(lbl_seg)
             with autocast(enabled=train_cfg['AMP']):
                 logits_seg, logits_so, logits_edge = model(img)
@@ -161,7 +162,8 @@ def main(cfg, gpu, save_dir):
         writer.add_scalar('train/loss_edge',  loss_local_edge, epoch)
         torch.cuda.empty_cache()
         pbar.close()
-        if train_cfg['EVAL_INTERVAL'] > epochs: continue
+        if train_cfg['EVAL_INTERVAL'] > epochs:
+            continue
         # evaluate the model
         if (epoch + 1) % train_cfg['EVAL_INTERVAL'] == 0 or (epoch + 1) == epochs:
             # val evaluation
@@ -231,8 +233,9 @@ if __name__ == '__main__':
     parser.add_argument('--save_epoch', type=str2bool, default=False, help='Configuration file to use')
     parser.add_argument('--val', type=str, default='val', help='Configuration file to use')
     parser.add_argument('--edge', type=str2bool, default=False, help='if use edge supervision')
-    parser.add_argument('--hier', type=str2bool, default=True, help='if use the hierarchical loss')
-    parser.add_argument('--soem', type=str2bool, default=True, help='if use the small object example mining alg')
+    parser.add_argument('--top', type=str2bool, default=True, help='if use the top head')
+    parser.add_argument('--hier', type=str2bool, default=False, help='if use the hierarchical loss')
+    parser.add_argument('--soem', type=str2bool, default=False, help='if use the small object example mining alg')
     parser.add_argument('--ratio', type=float, default=0.1, help='ratio for soem algorithm')
     # parser.add_argument('--thre', type=float, default=0.5, help='threshold for soem algorithm')
     args = parser.parse_args()
@@ -244,6 +247,7 @@ if __name__ == '__main__':
             'save_epoch': args.save_epoch,
             'val': args.val,
             'edge': args.edge,
+            'top': args.top,
             'hier': args.hier,
             'soem': args.soem,
             'ratio': args.ratio,
@@ -258,7 +262,12 @@ if __name__ == '__main__':
                              f'{_cfg["DATASET"]["NAME"]}_'
                              f'{time.strftime("%Y%m%d%H%M%S", time.localtime())}')
     os.makedirs(_save_dir, exist_ok=True)
-
+    ckpt_best_path = os.path.join(
+        _save_dir,
+        f"{_cfg['MODEL']['NAME']}_{_cfg['MODEL']['BACKBONE']}_{_cfg['DATASET']['NAME']}_best.pth"
+    )
+    _cfg['EVAL']['MODEL_PATH'] = ckpt_best_path
+    _cfg['TEST']['MODEL_PATH'] = ckpt_best_path
     init_logger(logger_name=None, log_dir=os.path.join(_save_dir, 'logs'), log_level=logging.INFO)
     logging.info(yaml.dump(_cfg))
     with open(os.path.join(_save_dir, 'config.yaml'), 'w') as sf:

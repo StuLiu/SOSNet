@@ -1,0 +1,53 @@
+DEVICE          : cuda              # device used for training and evaluation (cpu, cuda, cuda0, cuda1, ...)
+SAVE_DIR        : 'output_ablation/TopFormer/vaihingen'         # output folder name used for saving the model, logs and inference results
+
+MODEL:
+  NAME          : TopFormer                                           # name of the model you are using
+  BACKBONE      : TokenPyramidTransformer-B                                               # model variant
+  PRETRAINED    : 'checkpoints/backbones/topformer/topformer-B-224-75.3.pth'              # backbone model's weight
+
+DATASET:
+  NAME          : Vaihingen                     # dataset name to be trained
+  ROOT          : 'data/ISPRS_DATA/Vaihingen2'                # dataset root path
+  IGNORE_LABEL  : 5                             # ignore_label for back propagation(loss) and aug filling
+  H_FLIP        : true
+  V_FLIP        : true
+
+TRAIN:
+  IMAGE_SIZE    : [512, 512]      # training image size in (h, w)
+  BATCH_SIZE    : 32              # batch size used to train
+  EPOCHS        : 500             # number of epochs to train
+  EVAL_INTERVAL : 25              # evaluation interval during training
+  AMP           : false           # use AMP in training
+  DDP           : false           # use DDP training
+  MAX_INERITER  : 999999          # max iteration for each epoch
+
+LOSS:
+  NAME          : OhemCrossEntropy          # loss function name (ohemce, ce, dice)
+  CLS_WEIGHTS   : false            # use class weights in loss calculation
+
+OPTIMIZER:
+  NAME          : adamw           # optimizer name
+  LR            : 0.001           # initial learning rate used in optimizer
+  WEIGHT_DECAY  : 0.01            # decay rate used in optimizer
+
+SCHEDULER:
+  NAME          : warmuppolylr    # scheduler name
+  POWER         : 0.9             # scheduler power
+  WARMUP        : 10              # warmup epochs used in scheduler
+  WARMUP_RATIO  : 0.1             # warmup ratio
+
+EVAL:
+  MODEL_PATH    : 'output/SOSNet_MobileNetV3-large_Vaihingen_best.pth'     # trained model file path
+  IMAGE_SIZE    : [512, 512]                          # evaluation image size in (h, w)
+  MSF: 
+    ENABLE      : false                               # multi-scale and flip evaluation
+    FLIP        : true                                # use flip in evaluation  
+    SCALES      : [0.5, 0.75, 1.0, 1.25, 1.5, 1.75]   # scales used in MSF evaluation                
+  TRAIN_SET     : false
+
+TEST:
+  MODEL_PATH    : 'output/SOSNet_MobileNetV3-large_Vaihingen_best.pth'     # trained model file path
+  FILE          : 'assests/camvid'                    # filename or foldername 
+  IMAGE_SIZE    : [512, 512]                          # inference image size in (h, w)
+  OVERLAY       : true                                # save the overlay result (image_alpha+label_alpha)

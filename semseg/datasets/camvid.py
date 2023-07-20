@@ -40,21 +40,22 @@ class CamVid(Dataset):
 
     SMALL_OBJECT = [2, 6, 9, 10]
 
-    def __init__(self, root: str, split: str = 'train', transform=None, preload=False) -> None:
+    def __init__(self, root: str, split: str = 'train', transform=None, preload=False, postfix_dir='') -> None:
         super().__init__()
         assert split in ['train', 'val', 'test']
+        # assert postfix_dir in ['', '_so_0_1024', '_so_1024_4096', '_so_4096_16384', '_so_16384_1048576']
+        assert postfix_dir in ['', '_so_0_1024', '_so_0_4096', '_so_0_16384', '_so_0_65536', '_so_0_1048576']
         self.split = split
         self.transform = transform
         self.n_classes = len(self.CLASSES)
-        # #######################################################
-        # self.ignore_label = -1
         self.ignore_label = 11
         self.preload = preload
         self.pairs = []
 
         imgs = glob(osp.join(root, self.split) + '/*.png')
         for img_path in imgs:
-            lbl_path = img_path.replace(self.split, self.split + 'annot')
+            lbl_dir_name = self.split + 'annot' + postfix_dir
+            lbl_path = img_path.replace(self.split, lbl_dir_name)
             data_pair = [
                 io.read_image(img_path) if self.preload else img_path,
                 io.read_image(lbl_path) if self.preload else lbl_path,
@@ -82,7 +83,7 @@ class CamVid729x969(Dataset):
     """
     num_classes: 11
     all_num_classes: 31
-
+16384
     id	class	    r	g	b
     0	Bicyclist	0	128	192
     1	Building	128	0	0
@@ -157,10 +158,10 @@ class CamVid729x969(Dataset):
 
 
 if __name__ == '__main__':
-    # from semseg.utils.visualize import visualize_dataset_sample
-    #
-    # visualize_dataset_sample(CamVid2, '../../data/CamVid')
-    _dataset = CamVid('../../data/CamVid', 'train', preload=False)
+    from semseg.utils.visualize import visualize_dataset_sample
+
+    visualize_dataset_sample(CamVid, '../../data/CamVid', split='test', postfix_dir='_so_0_4096')
+    _dataset = CamVid('../../data/CamVid', 'train', preload=False, postfix_dir='_so_0_4096')
     print(len(_dataset))
     # for _i, _l in _dataset:
     #     print(_i.size(), _l.size())

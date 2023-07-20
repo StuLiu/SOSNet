@@ -69,7 +69,7 @@ class HierarchicalLoss(nn.Module):
 
     def __init__(self, num_class: int, small_obj_ids):
         super().__init__()
-        self.m_s = torch.zeros((1, num_class, 1, 1), dtype=torch.int)
+        self.m_s = torch.zeros((1, num_class, 1, 1), dtype=torch.int).cuda()
         for _id in range(num_class):
             if _id in small_obj_ids:
                 self.m_s[0][_id][0][0] = 1
@@ -103,19 +103,20 @@ class HierarchicalLoss(nn.Module):
         mse = torch.sum(self.mse(one_hot_b_2_t, one_hot_t), dim=1)
         return mse
 
-    def to(self, device):
-        super().to(device)
-        self.m_s = self.m_s.to(device)
-        return self
+    # def to(self, device):
+    #     super().to(device)
+    #     self.m_s = self.m_s.to(device)
+    #     return self
 
 
 class HierarchicalSegLoss(nn.Module):
 
-    def __init__(self, loss_seg_fn, loss_hier_fn, ignore_label, is_hier=False, is_soem=False, ratio=0.1):
+    def __init__(self, loss_seg_fn, loss_hier_fn, ignore_label, is_top=False, is_hier=False, is_soem=False, ratio=0.1):
         super(HierarchicalSegLoss, self).__init__()
         self.loss_bottom_fn = loss_seg_fn
         self.loss_top_fn = loss_seg_fn
         self.loss_hier_fn = loss_hier_fn
+        self.is_top = is_top
         self.is_hier = is_hier
         self.is_soem = is_soem
         if is_soem:
@@ -133,14 +134,14 @@ class HierarchicalSegLoss(nn.Module):
             loss_hierSeg: torch.Tensor, a float scaler
         """
         loss_bottom = self.loss_bottom_fn(logits_bottom, lbl_bottom)
-        if self.is_hier:
+        loss_top = 0
+        loss_hier = 0
+        if self.is_top:
             loss_top = self.loss_top_fn(logits_top, lbl_top)
-            loss_hier = self.loss_hier_fn(logits_bottom, logits_top)
-            # loss_hier = torch.mean(self.loss_hier_fn(logits_bottom, logits_top))
-            # return loss_hier
-        else:
-            loss_top = 0
-            loss_hier = 0
+            if self.is_hier:
+                loss_hier = self.loss_hier_fn(logits_bottom, logits_top)
+                # loss_hier = torch.mean(self.loss_hier_fn(logits_bottom, logits_top))
+                # return loss_hier
 
         loss_hierSeg = loss_top + loss_hier + loss_bottom
         if self.is_soem:

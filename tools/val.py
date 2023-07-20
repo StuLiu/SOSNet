@@ -25,8 +25,8 @@ def evaluate(model, dataloader, device):
 
     iter = 0
     for images, labels in tqdm(dataloader):
-        images = images.to(device)
-        labels = labels.to(device)
+        images = images.cuda()
+        labels = labels.cuda()
         preds = model(images).softmax(dim=1)
         metrics.update(preds, labels)
         iter += 1
@@ -48,15 +48,14 @@ def evaluate_msf(model, dataloader, device, scales, flip):
     metrics = Metrics(n_classes, dataloader.dataset.ignore_label, device)
 
     for images, labels in tqdm(dataloader):
-        labels = labels.to(device)
+        labels = labels.cuda()
         B, H, W = labels.shape
-        scaled_logits = torch.zeros(B, n_classes, H, W).to(device)
-
+        scaled_logits = torch.zeros(B, n_classes, H, W).cuda()
         for scale in scales:
             new_H, new_W = int(scale * H), int(scale * W)
             new_H, new_W = int(math.ceil(new_H / 32)) * 32, int(math.ceil(new_W / 32)) * 32
             scaled_images = F.interpolate(images, size=(new_H, new_W), mode='bilinear', align_corners=True)
-            scaled_images = scaled_images.to(device)
+            scaled_images = scaled_images.cuda()
             logits = model(scaled_images)
             logits = F.interpolate(logits, size=(H, W), mode='bilinear', align_corners=True)
             scaled_logits += logits.softmax(dim=1)
@@ -82,7 +81,11 @@ def main(cfg, args):
 
     eval_cfg = cfg['EVAL']
     transform = get_val_augmentation(eval_cfg['IMAGE_SIZE'])
-    dataset = eval(cfg['DATASET']['NAME'])(cfg['DATASET']['ROOT'], args.val, transform)
+
+    postfix_dir = f'_so_{args.min_area}_{args.max_area}'
+    if args.max_area == -1:
+        postfix_dir = ''
+    dataset = eval(cfg['DATASET']['NAME'])(cfg['DATASET']['ROOT'], args.val, transform, postfix_dir=postfix_dir)
     dataloader = DataLoader(dataset, 1, num_workers=1, pin_memory=True)
 
     model_path = Path(eval_cfg['MODEL_PATH'])
@@ -93,7 +96,7 @@ def main(cfg, args):
 
     model = eval(cfg['MODEL']['NAME'])(cfg['MODEL']['BACKBONE'], dataset.n_classes)
     model.load_state_dict(torch.load(str(model_path), map_location='cpu'))
-    model = model.to(device)
+    model = model.cuda()
 
     print(f"{cfg['MODEL']['NAME']} parameters: {count_parameters(model)}MB")
 
@@ -119,6 +122,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', type=str, default='configs/helen.yaml')
     parser.add_argument('--val', type=str, default='val')
+    parser.add_argument('--min-area', type=int, default=0)
+    parser.add_argument('--max-area', type=int, default=-1)
     _args = parser.parse_args()
 
     with open(_args.cfg) as f:

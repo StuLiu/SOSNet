@@ -8,7 +8,7 @@ class Metrics:
     def __init__(self, num_classes: int, ignore_label: int, device) -> None:
         self.ignore_label = ignore_label
         self.num_classes = num_classes
-        self.hist = torch.zeros(num_classes, num_classes).to(device)
+        self.hist = torch.zeros(num_classes, num_classes).cuda()
 
     def update(self, pred: Tensor, target: Tensor) -> None:
         pred = pred.argmax(dim=1)

@@ -29,19 +29,19 @@ def main(
         total_time += toc - tic
     total_time /= 10
 
-    from semseg.utils.utils import model_summary, init_logger
-
-    init_logger()
-    model_summary(model, (1, 3, *image_size))
+    # from semseg.utils.utils import model_summary, init_logger
+    #
+    # init_logger()
+    # model_summary(model, (1, 3, *image_size))
     print(f"Inference time: {total_time*1000:.2f}ms")
     print(f"FPS: {1/total_time}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model-name', type=str, default='SOSNet')
+    parser.add_argument('--model-name', type=str, default='FastSCNN')
     parser.add_argument('--backbone-name', type=str, default='MobileNetV3-large')
     # parser.add_argument('--backbone-name', type=str, default=None)
-    parser.add_argument('--image-size', type=list, default=[512, 1024])
+    parser.add_argument('--image-size', type=list, default=[512, 512])
     parser.add_argument('--num-classes', type=int, default=8)
     parser.add_argument('--device', type=str, default='cuda')
     args = parser.parse_args()

@@ -1,6 +1,7 @@
 <p>SOSNet: Real-Time Small Object Segmentation via Hierarchical Decoding and Example Mining</p>
 
-![本地路径](assests/improvement.png)
+![本地路径](assests/improvement.png#pic_center)
+
 ![本地路径](assests/overview.png)
 ## <div align="center">Usage</div>
 
@@ -25,7 +26,7 @@ $ pip install -e .
 <details>
   <summary><strong>Configuration</strong> (click to expand)</summary>
 
-Create a configuration file in `configs`. Sample configuration for segformer dataset can be found [here](configs/segformer). Then edit the fields you think if it is needed. This configuration file is needed for all of training, evaluation and prediction scripts.
+Create a configuration file in `configs`. Sample configuration for segformer dataset can be found [here](configs/SegFormer). Then edit the fields you think if it is needed. This configuration file is needed for all of training, evaluation and prediction scripts.
 
 </details>
 

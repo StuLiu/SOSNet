@@ -113,6 +113,38 @@ class Decoder(nn.Module):
                     nn.init.constant_(ly.bias, 0)
 
 
+class DeeplabV3Plus0(BaseModel):
+    def __init__(self, backbone='ResNet-50', class_num=19):
+        super(DeeplabV3Plus0, self).__init__(backbone=backbone)
+
+        # self.aspp = ASPP(in_chan=2048, out_chan=256, with_gp=True)
+        self.aspp = ASPP(in_chan=self.backbone.channels[-1], out_chan=256, with_gp=True)
+        self.decoder = Decoder(class_num, low_chan=self.backbone.channels[0])
+        self.init_weight()
+
+    def forward(self, x):
+        H, W = x.size()[2:]
+        feat4, _, _, feat32 = self.backbone(x)
+        feat_aspp = self.aspp(feat32)
+        logits = self.decoder(feat4, feat_aspp)
+        logits = F.interpolate(logits, (H, W), mode='bilinear', align_corners=True)
+
+        return logits
+
+    def init_weight(self):
+        for ly in self.children():
+            if isinstance(ly, nn.Conv2d):
+                nn.init.kaiming_normal_(ly.weight, a=1)
+                if ly.bias is not None:
+                    nn.init.constant_(ly.bias, 0)
+
+    def get_params(self):
+        back_bn_params, back_no_bn_params = self.backbone.get_params()
+        tune_wd_params = list(self.aspp.parameters()) + list(self.decoder.parameters()) + back_no_bn_params
+        no_tune_wd_params = back_bn_params
+        return tune_wd_params, no_tune_wd_params
+
+
 class DeeplabV3Plus(BaseModel):
     def __init__(self, backbone='ResNet-50', class_num=19):
         super(DeeplabV3Plus, self).__init__(backbone=backbone)
