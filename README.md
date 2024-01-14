@@ -101,10 +101,6 @@ $ python tools/infer_single.py --img_path demo/camvid_0.png --cfg configs/segfor
 <b>Cite/Reference</b>
 <p>If you find SOSNet useful in your research, please consider citing:</p>
 
-
-<b>Cite/Reference</b>
-<p>If you find SOSNet useful in your research, please consider citing:</p>
-
 ```
 @ARTICLE{10359121,
   author={Liu, Wang and Kang, Xudong and Duan, Puhong and Xie, Zhuojun and Wei, Xiaohui and Li, Shutao},
