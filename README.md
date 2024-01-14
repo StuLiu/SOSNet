@@ -1,8 +1,12 @@
-<p>SOSNet: Real-Time Small Object Segmentation via Hierarchical Decoding and Example Mining</p>
+<p>The official PyTorch implementation of "SOSNet: Real-Time Small Object Segmentation via Hierarchical Decoding and Example Mining"</p>
 
-![本地路径](assests/improve.png#pic_center)
+<div style="display:flex;justify-content:center; text-align:center"> 
+  <p style="">Improvement</p>
+  <img src="https://github.com/StuLiu/SOSNet/blob/master/assests/improve.png" width="600px" style="">
+  <p style="">Method overview</p>
+  <img src="https://github.com/StuLiu/SOSNet/blob/master/assests/overview.png" width="600px" style="">
+</div>
 
-![本地路径](assests/overview.png)
 ## <div align="center">Usage</div>
 
 <details open>
@@ -93,6 +97,26 @@ $ python tools/infer_single.py --img_path demo/camvid_0.png --cfg configs/segfor
 ```
 
 </details>
+
+<b>Cite/Reference</b>
+<p>If you find SOSNet useful in your research, please consider citing:</p>
+
+
+<b>Cite/Reference</b>
+<p>If you find SOSNet useful in your research, please consider citing:</p>
+
+```
+@ARTICLE{10359121,
+  author={Liu, Wang and Kang, Xudong and Duan, Puhong and Xie, Zhuojun and Wei, Xiaohui and Li, Shutao},
+  journal={IEEE Transactions on Neural Networks and Learning Systems}, 
+  title={SOSNet: Real-Time Small Object Segmentation via Hierarchical Decoding and Example Mining}, 
+  year={2023},
+  volume={},
+  number={},
+  pages={1-13},
+  doi={10.1109/TNNLS.2023.3338732}}
+
+```
 
 <b>Acknowledge</b>
 <p>This project is based on the repository 'semantic-segmentation'.</p>
